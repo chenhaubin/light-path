@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>光之径 | Light Path</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 20px;
+            width: 100%;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #00d4ff, #7b2ff7, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px rgba(0, 212, 255, 0.3);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .game-container {
+            display: flex;
+            gap: 30px;
+            padding: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        
+        .canvas-wrapper {
+            position: relative;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 0 60px rgba(0, 212, 255, 0.15),
+                        inset 0 0 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        canvas {
+            display: block;
+            cursor: crosshair;
+        }
+        
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 200px;
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .panel h3 {
+            margin-bottom: 15px;
+            color: #00d4ff;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .level-info {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .moves-counter {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .toolbox {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .tool-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            cursor: grab;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        
+        .tool-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(0, 212, 255, 0.3);
+        }
+        
+        .tool-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+        
+        .tool-icon {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .tool-count {
+            margin-left: auto;
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: bold;
+        }
+        
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        button.secondary {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        button.secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        .instructions {
+            color: #aaa;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+        
+        .victory-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+        
+        .victory-modal.show {
+            display: flex;
+        }
+        
+        .victory-content {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 40px 60px;
+            border-radius: 20px;
+            text-align: center;
+            border: 2px solid rgba(0, 212, 255, 0.3);
+            box-shadow: 0 0 100px rgba(0, 212, 255, 0.3);
+            animation: victoryPulse 0.5s ease-out;
+        }
+        
+        @keyframes victoryPulse {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        .victory-content h2 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #00d4ff, #7b2ff7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+        }
+        
+        .victory-stats {
+            color: #888;
+            margin-bottom: 30px;
+        }
+        
+        .level-select {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .level-btn {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .level-btn:hover {
+            border-color: rgba(0, 212, 255, 0.5);
+            background: rgba(0, 212, 255, 0.1);
+        }
+        
+        .level-btn.active {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: #00d4ff;
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+        }
+        
+        .level-btn.completed {
+            background: rgba(123, 47, 247, 0.2);
+            border-color: #7b2ff7;
+        }
+        
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #aaa;
+        }
+        
+        .legend-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>✨ 光之径</h1>
+        <p class="subtitle">Light Path - 物理光线反射解谜游戏</p>
+    </div>
+    
+    <div class="game-container">
+        <div class="canvas-wrapper">
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+        </div>
+        
+        <div class="sidebar">
+            <div class="panel">
+                <h3>📊 关卡信息</h3>
+                <div class="level-info">关卡 <span id="currentLevel">1</span> / 8</div>
+                <div class="moves-counter">移动次数: <span id="moveCount">0</span></div>
+            </div>
+            
+            <div class="panel">
+                <h3>🧰 工具箱</h3>
+                <div class="toolbox" id="toolbox">
+                    <div class="tool-item" draggable="true" data-type="mirror">
+                        <div class="tool-icon">🪞</div>
+                        <span>镜子</span>
+                        <span class="tool-count" id="mirrorCount">3</span>
+                    </div>
+                    <div class="tool-item" draggable="true" data-type="splitter">
+                        <div class="tool-icon">💠</div>
+                        <span>分光镜</span>
+                        <span class="tool-count" id="splitterCount">1</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>🎯 图例</h3>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-icon" style="background: #00ff88;">💡</div>
+                        <span>光源</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-icon" style="background: #ff4757;">🎯</div>
+                        <span>接收器</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-icon" style="background: #666;">🧱</div>
+                        <span>障碍物</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-icon" style="background: #00d4ff;">🪞</div>
+                        <span>镜子</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>🎮 控制</h3>
+                <div class="buttons">
+                    <button onclick="game.resetLevel()">🔄 重置关卡</button>
+                    <button class="secondary" onclick="game.showLevelSelect()">📋 选择关卡</button>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>📖 说明</h3>
+                <p class="instructions">
+                    拖动镜子到网格中，引导光线从💡光源到达🎯接收器。<br><br>
+                    • 镜子以45°角反射光线<br>
+                    • 点击放置的镜子可旋转<br>
+                    • 分光镜可将光线分成两路<br>
+                    • 用最少的镜子完成挑战！
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="victory-modal" id="victoryModal">
+        <div class="victory-content">
+            <h2>🎉 恭喜通关!</h2>
+            <p class="victory-stats">
+                关卡 <span id="victoryLevel">1</span> 完成<br>
+                移动次数: <span id="victoryMoves">0</span>
+            </p>
+            <button onclick="game.nextLevel()">下一关 ➡️</button>
+        </div>
+    </div>
+    
+    <div class="victory-modal" id="levelSelectModal">
+        <div class="victory-content" style="max-width: 400px;">
+            <h2>🎯 选择关卡</h2>
+            <div class="level-select" id="levelSelect"></div>
+            <button class="secondary" onclick="game.hideLevelSelect()" style="margin-top: 20px;">关闭</button>
+        </div>
+    </div>
+
+    <script>
+        const CELL_SIZE = 60;
+        const GRID_SIZE = 10;
+        
+        const CELL_TYPES = {
+            EMPTY: 0,
+            SOURCE: 1,
+            TARGET: 2,
+            WALL: 3,
+            MIRROR: 4,
+            SPLITTER: 5
+        };
+        
+        const DIRECTIONS = {
+            UP: { x: 0, y: -1, angle: -Math.PI / 2 },
+            RIGHT: { x: 1, y: 0, angle: 0 },
+            DOWN: { x: 0, y: 1, angle: Math.PI / 2 },
+            LEFT: { x: -1, y: 0, angle: Math.PI }
+        };
+        
+        const LEVELS = [
+            {
+                id: 1,
+                name: "初识光线",
+                mirrorCount: 1,
+                splitterCount: 0,
+                grid: [
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 2]
+                ],
+                sourceDir: 'RIGHT'
+            },
+            {
+                id: 2,
+                name: "拐角",
+                mirrorCount: 2,
+                splitterCount: 0,
+                grid: [
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 3, 3, 3, 3, 3, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 2]
+                ],
+                sourceDir: 'RIGHT'
+            },
+            {
+                id: 3,
+                name: "迷宫",
+                mirrorCount: 3,
+                splitterCount: 0,
+                grid: [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+                    [0, 3, 3, 0, 0, 0, 3, 3, 0, 0],
+                    [0, 3, 0, 0, 0, 0, 0, 3, 0, 0],
+                    [0, 0, 0, 3, 3, 3, 0, 0, 0, 0],
+                    [0, 0, 0, 3, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 3, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 3, 3, 3, 0, 0],
+                    [0, 3, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 3, 3, 0, 0, 0, 0, 0, 0, 0],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                ],
+                sourceDir: 'UP'
+            },
+            {
+                id: 4,
+                name: "双镜之谜",
+                mirrorCount: 2,
+                splitterCount: 0,
+                grid: [
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 3, 3, 3, 3, 3, 0, 0, 0],
+                    [0, 0, 3, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 3, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 3, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 3, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 3, 3, 3, 3, 3, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 2]
+                ],
+                sourceDir: 'RIGHT'
+            },
+            {
+                id: 5,
+                name: "分光挑战",
+                mirrorCount: 2,
+                splitterCount: 1,
+                grid: [
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 3, 3, 3, 3, 0, 0, 0],
+                    [0, 0, 0, 3, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 3, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 3, 3, 3, 3, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [2, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                ],
+                sourceDir: 'RIGHT',
+                multiTarget: true
+            },
+            {
+                id: 6,
+                name: "回环",
+                mirrorCount: 4,
+                splitterCount: 0,
+                grid: [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 3, 3, 3, 3, 3, 3, 3, 0, 0],
+                    [0, 3, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 3, 0, 3, 3, 3, 3, 3, 0, 0],
+                    [0, 3, 0, 3, 0, 0, 0, 0, 0, 0],
+                    [1, 0, 0, 3, 0, 0, 0, 0, 2, 0],
+                    [0, 3, 0, 3, 0, 0, 0, 0, 0, 0],
+                    [0, 3, 0, 3, 3, 3, 3, 3, 0, 0],
+                    [0, 3, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 3, 3, 3, 3, 3, 3, 3, 0, 0]
+                ],
+                sourceDir: 'RIGHT'
+            },
+            {
+                id: 7,
+                name: "螺旋",
+                mirrorCount: 5,
+                splitterCount: 0,
+                grid: [
+                    [2, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 3, 3, 3, 3, 3, 3, 3, 3, 0],
+                    [0, 3, 0, 0, 0, 0, 0, 0, 3, 0],
+                    [0, 3, 0, 3, 3, 3, 3, 0, 3, 0],
+                    [0, 3, 0, 3, 0, 0, 3, 0, 3, 0],
+                    [0, 3, 0, 3, 0, 1, 3, 0, 3, 0],
+                    [0, 3, 0, 3, 3, 3, 3, 0, 3, 0],
+                    [0, 3, 0, 0, 0, 0, 0, 0, 3, 0],
+                    [0, 3, 3, 3, 3, 3, 3, 3, 3, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                ],
+                sourceDir: 'UP'
+            },
+            {
+                id: 8,
+                name: "终极挑战",
+                mirrorCount: 4,
+                splitterCount: 2,
+                grid: [
+                    [1, 0, 0, 0, 3, 0, 0, 0, 0, 2],
+                    [0, 0, 0, 0, 3, 0, 0, 0, 0, 0],
+                    [0, 0, 3, 3, 3, 3, 3, 0, 0, 0],
+                    [0, 0, 3, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 3, 0, 3, 3, 3, 3, 0, 0],
+                    [0, 0, 3, 0, 3, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 3, 0, 3, 3, 0, 0],
+                    [0, 0, 3, 0, 0, 0, 3, 0, 0, 0],
+                    [0, 0, 3, 3, 3, 3, 3, 0, 0, 0],
+                    [2, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                ],
+                sourceDir: 'RIGHT',
+                multiTarget: true
+            }
+        ];
+        
+        class LightPathGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.currentLevelIndex = 0;
+                this.grid = [];
+                this.mirrors = [];
+                this.lightPath = [];
+                this.moveCount = 0;
+                this.completedLevels = new Set();
+                this.draggedItem = null;
+                this.remainingMirrors = 0;
+                this.remainingSplitters = 0;
+                this.particles = [];
+                
+                this.init();
+            }
+            
+            init() {
+                this.loadLevel(0);
+                this.setupEventListeners();
+                this.animate();
+            }
+            
+            loadLevel(index) {
+                this.currentLevelIndex = index;
+                const level = LEVELS[index];
+                
+                // Deep copy grid
+                this.grid = level.grid.map(row => [...row]);
+                this.mirrors = [];
+                this.lightPath = [];
+                this.moveCount = 0;
+                this.remainingMirrors = level.mirrorCount;
+                this.remainingSplitters = level.splitterCount;
+                this.particles = [];
+                
+                // Find source position
+                this.sourcePos = this.findCell(CELL_TYPES.SOURCE);
+                this.sourceDir = level.sourceDir;
+                
+                // Find target positions
+                this.targetPositions = [];
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    for (let x = 0; x < GRID_SIZE; x++) {
+                        if (this.grid[y][x] === CELL_TYPES.TARGET) {
+                            this.targetPositions.push({ x, y });
+                        }
+                    }
+                }
+                
+                this.updateUI();
+                this.calculateLightPath();
+            }
+            
+            findCell(type) {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    for (let x = 0; x < GRID_SIZE; x++) {
+                        if (this.grid[y][x] === type) return { x, y };
+                    }
+                }
+                return null;
+            }
+            
+            calculateLightPath() {
+                this.lightPath = [];
+                if (!this.sourcePos) return;
+                
+                const visited = new Set();
+                
+                const traceRay = (x, y, dir, path = []) => {
+                    const key = `${x},${y},${dir}`;
+                    if (visited.has(key) || path.length > 100) return;
+                    visited.add(key);
+                    
+                    // Add current position to path
+                    path.push({ x, y, dir });
+                    
+                    // Check if out of bounds
+                    if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) {
+                        this.lightPath.push([...path]);
+                        return;
+                    }
+                    
+                    // Check for target hit
+                    if (this.grid[y][x] === CELL_TYPES.TARGET) {
+                        path[path.length - 1].hitTarget = true;
+                        this.lightPath.push([...path]);
+                        this.spawnParticles(x, y);
+                        return;
+                    }
+                    
+                    // Check for wall
+                    if (this.grid[y][x] === CELL_TYPES.WALL) {
+                        this.lightPath.push([...path]);
+                        return;
+                    }
+                    
+                    // Check for mirror
+                    const mirror = this.mirrors.find(m => m.x === x && m.y === y);
+                    if (mirror) {
+                        let newDir;
+                        if (mirror.type === 'mirror') {
+                            // 45° mirror reflection
+                            const reflections = {
+                                'UP': mirror.rotation === 0 ? 'RIGHT' : 'LEFT',
+                                'RIGHT': mirror.rotation === 0 ? 'UP' : 'DOWN',
+                                'DOWN': mirror.rotation === 0 ? 'LEFT' : 'RIGHT',
+                                'LEFT': mirror.rotation === 0 ? 'DOWN' : 'UP'
+                            };
+                            newDir = reflections[dir];
+                        } else if (mirror.type === 'splitter') {
+                            // Splitter - create two paths
+                            const splitDirs = {
+                                'UP': ['LEFT', 'RIGHT'],
+                                'DOWN': ['LEFT', 'RIGHT'],
+                                'LEFT': ['UP', 'DOWN'],
+                                'RIGHT': ['UP', 'DOWN']
+                            };
+                            const [dir1, dir2] = splitDirs[dir];
+                            const dx1 = DIRECTIONS[dir1].x;
+                            const dy1 = DIRECTIONS[dir1].y;
+                            const dx2 = DIRECTIONS[dir2].x;
+                            const dy2 = DIRECTIONS[dir2].y;
+                            traceRay(x + dx1, y + dy1, dir1, [...path]);
+                            traceRay(x + dx2, y + dy2, dir2, [...path]);
+                            return;
+                        }
+                        
+                        const dx = DIRECTIONS[newDir].x;
+                        const dy = DIRECTIONS[newDir].y;
+                        traceRay(x + dx, y + dy, newDir, path);
+                        return;
+                    }
+                    
+                    // Continue in same direction
+                    const dx = DIRECTIONS[dir].x;
+                    const dy = DIRECTIONS[dir].y;
+                    traceRay(x + dx, y + dy, dir, path);
+                };
+                
+                const startDir = this.sourceDir;
+                const dx = DIRECTIONS[startDir].x;
+                const dy = DIRECTIONS[startDir].y;
+                
+                traceRay(
+                    this.sourcePos.x + dx,
+                    this.sourcePos.y + dy,
+                    startDir
+                );
+                
+                this.checkVictory();
+            }
+            
+            spawnParticles(x, y) {
+                const px = x * CELL_SIZE + CELL_SIZE / 2;
+                const py = y * CELL_SIZE + CELL_SIZE / 2;
+                
+                for (let i = 0; i < 5; i++) {
+                    this.particles.push({
+                        x: px,
+                        y: py,
+                        vx: (Math.random() - 0.5) * 4,
+                        vy: (Math.random() - 0.5) * 4,
+                        life: 1.0,
+                        color: `hsl(${Math.random() * 60 + 30}, 100%, 50%)`
+                    });
+                }
+            }
+            
+            checkVictory() {
+                const hitTargets = new Set();
+                
+                for (const path of this.lightPath) {
+                    for (const point of path) {
+                        if (point.hitTarget) {
+                            hitTargets.add(`${point.x},${point.y}`);
+                        }
+                    }
+                }
+                
+                const allHit = this.targetPositions.every(target => 
+                    hitTargets.has(`${target.x},${target.y}`)
+                );
+                
+                if (allHit && !this.victoryShown) {
+                    this.victoryShown = true;
+                    this.completedLevels.add(this.currentLevelIndex);
+                    setTimeout(() => this.showVictory(), 500);
+                }
+            }
+            
+            showVictory() {
+                document.getElementById('victoryLevel').textContent = this.currentLevelIndex + 1;
+                document.getElementById('victoryMoves').textContent = this.moveCount;
+                document.getElementById('victoryModal').classList.add('show');
+            }
+            
+            nextLevel() {
+                document.getElementById('victoryModal').classList.remove('show');
+                this.victoryShown = false;
+                
+                if (this.currentLevelIndex < LEVELS.length - 1) {
+                    this.loadLevel(this.currentLevelIndex + 1);
+                }
+            }
+            
+            resetLevel() {
+                this.victoryShown = false;
+                this.loadLevel(this.currentLevelIndex);
+            }
+            
+            showLevelSelect() {
+                const container = document.getElementById('levelSelect');
+                container.innerHTML = '';
+                
+                LEVELS.forEach((level, i) => {
+                    const btn = document.createElement('div');
+                    btn.className = 'level-btn';
+                    if (i === this.currentLevelIndex) btn.classList.add('active');
+                    if (this.completedLevels.has(i)) btn.classList.add('completed');
+                    btn.textContent = i + 1;
+                    btn.onclick = () => {
+                        this.loadLevel(i);
+                        this.hideLevelSelect();
+                    };
+                    container.appendChild(btn);
+                });
+                
+                document.getElementById('levelSelectModal').classList.add('show');
+            }
+            
+            hideLevelSelect() {
+                document.getElementById('levelSelectModal').classList.remove('show');
+            }
+            
+            updateUI() {
+                document.getElementById('currentLevel').textContent = this.currentLevelIndex + 1;
+                document.getElementById('moveCount').textContent = this.moveCount;
+                document.getElementById('mirrorCount').textContent = this.remainingMirrors;
+                document.getElementById('splitterCount').textContent = this.remainingSplitters;
+            }
+            
+            setupEventListeners() {
+                // Drag and drop from toolbox
+                const toolbox = document.getElementById('toolbox');
+                
+                toolbox.addEventListener('dragstart', (e) => {
+                    if (e.target.classList.contains('tool-item')) {
+                        const type = e.target.dataset.type;
+                        if ((type === 'mirror' && this.remainingMirrors > 0) ||
+                            (type === 'splitter' && this.remainingSplitters > 0)) {
+                            this.draggedItem = type;
+                            e.target.classList.add('dragging');
+                        } else {
+                            e.preventDefault();
+                        }
+                    }
+                });
+                
+                toolbox.addEventListener('dragend', (e) => {
+                    if (e.target.classList.contains('tool-item')) {
+                        e.target.classList.remove('dragging');
+                    }
+                });
+                
+                // Canvas interactions
+                this.canvas.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                });
+                
+                this.canvas.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    if (!this.draggedItem) return;
+                    
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+                    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+                    
+                    if (this.canPlaceMirror(x, y)) {
+                        this.placeMirror(x, y, this.draggedItem);
+                        this.moveCount++;
+                        
+                        if (this.draggedItem === 'mirror') {
+                            this.remainingMirrors--;
+                        } else if (this.draggedItem === 'splitter') {
+                            this.remainingSplitters--;
+                        }
+                        
+                        this.updateUI();
+                        this.calculateLightPath();
+                    }
+                    
+                    this.draggedItem = null;
+                });
+                
+                // Click to rotate or remove mirrors
+                this.canvas.addEventListener('click', (e) => {
+                    const rect = this.canvas.getBoundingClientRect();
+                    const x = Math.floor((e.clientX - rect.left) / CELL_SIZE);
+                    const y = Math.floor((e.clientY - rect.top) / CELL_SIZE);
+                    
+                    const mirrorIndex = this.mirrors.findIndex(m => m.x === x && m.y === y);
+                    
+                    if (mirrorIndex >= 0) {
+                        const mirror = this.mirrors[mirrorIndex];
+                        
+                        // Right click or shift+click to remove
+                        if (e.shiftKey || e.button === 2) {
+                            this.mirrors.splice(mirrorIndex, 1);
+                            if (mirror.type === 'mirror') {
+                                this.remainingMirrors++;
+                            } else if (mirror.type === 'splitter') {
+                                this.remainingSplitters++;
+                            }
+                            this.moveCount++;
+                        } else {
+                            // Rotate mirror
+                            mirror.rotation = (mirror.rotation + 1) % 2;
+                            this.moveCount++;
+                        }
+                        
+                        this.updateUI();
+                        this.calculateLightPath();
+                    }
+                });
+                
+                this.canvas.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                });
+            }
+            
+            canPlaceMirror(x, y) {
+                if (x < 0 || x >= GRID_SIZE || y < 0 || y >= GRID_SIZE) return false;
+                if (this.grid[y][x] !== CELL_TYPES.EMPTY) return false;
+                if (this.mirrors.some(m => m.x === x && m.y === y)) return false;
+                return true;
+            }
+            
+            placeMirror(x, y, type) {
+                this.mirrors.push({
+                    x,
+                    y,
+                    type,
+                    rotation: 0
+                });
+            }
+            
+            draw() {
+                // Clear canvas
+                this.ctx.fillStyle = '#0a0a0f';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw grid
+                this.drawGrid();
+                
+                // Draw light paths
+                this.drawLightPaths();
+                
+                // Draw game elements
+                this.drawElements();
+                
+                // Draw particles
+                this.drawParticles();
+            }
+            
+            drawGrid() {
+                this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+                this.ctx.lineWidth = 1;
+                
+                for (let i = 0; i <= GRID_SIZE; i++) {
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(i * CELL_SIZE, 0);
+                    this.ctx.lineTo(i * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+                    this.ctx.stroke();
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, i * CELL_SIZE);
+                    this.ctx.lineTo(GRID_SIZE * CELL_SIZE, i * CELL_SIZE);
+                    this.ctx.stroke();
+                }
+            }
+            
+            drawLightPaths() {
+                for (const path of this.lightPath) {
+                    if (path.length < 2) continue;
+                    
+                    // Create gradient
+                    const gradient = this.ctx.createLinearGradient(
+                        path[0].x * CELL_SIZE + CELL_SIZE / 2,
+                        path[0].y * CELL_SIZE + CELL_SIZE / 2,
+                        path[path.length - 1].x * CELL_SIZE + CELL_SIZE / 2,
+                        path[path.length - 1].y * CELL_SIZE + CELL_SIZE / 2
+                    );
+                    gradient.addColorStop(0, '#00d4ff');
+                    gradient.addColorStop(0.5, '#7b2ff7');
+                    gradient.addColorStop(1, '#f472b6');
+                    
+                    // Draw main beam
+                    this.ctx.strokeStyle = gradient;
+                    this.ctx.lineWidth = 4;
+                    this.ctx.lineCap = 'round';
+                    this.ctx.lineJoin = 'round';
+                    this.ctx.shadowColor = '#00d4ff';
+                    this.ctx.shadowBlur = 20;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(
+                        path[0].x * CELL_SIZE + CELL_SIZE / 2,
+                        path[0].y * CELL_SIZE + CELL_SIZE / 2
+                    );
+                    
+                    for (let i = 1; i < path.length; i++) {
+                        this.ctx.lineTo(
+                            path[i].x * CELL_SIZE + CELL_SIZE / 2,
+                            path[i].y * CELL_SIZE + CELL_SIZE / 2
+                        );
+                    }
+                    
+                    this.ctx.stroke();
+                    
+                    // Draw inner bright core
+                    this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.shadowBlur = 0;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(
+                        path[0].x * CELL_SIZE + CELL_SIZE / 2,
+                        path[0].y * CELL_SIZE + CELL_SIZE / 2
+                    );
+                    
+                    for (let i = 1; i < path.length; i++) {
+                        this.ctx.lineTo(
+                            path[i].x * CELL_SIZE + CELL_SIZE / 2,
+                            path[i].y * CELL_SIZE + CELL_SIZE / 2
+                        );
+                    }
+                    
+                    this.ctx.stroke();
+                }
+            }
+            
+            drawElements() {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    for (let x = 0; x < GRID_SIZE; x++) {
+                        const cellType = this.grid[y][x];
+                        const px = x * CELL_SIZE;
+                        const py = y * CELL_SIZE;
+                        const cx = px + CELL_SIZE / 2;
+                        const cy = py + CELL_SIZE / 2;
+                        
+                        switch (cellType) {
+                            case CELL_TYPES.SOURCE:
+                                this.drawSource(cx, cy, x, y);
+                                break;
+                            case CELL_TYPES.TARGET:
+                                const isHit = this.lightPath.some(path => 
+                                    path.some(p => p.hitTarget && p.x === x && p.y === y)
+                                );
+                                this.drawTarget(cx, cy, isHit);
+                                break;
+                            case CELL_TYPES.WALL:
+                                this.drawWall(px, py);
+                                break;
+                        }
+                    }
+                }
+                
+                // Draw placed mirrors
+                for (const mirror of this.mirrors) {
+                    this.drawMirror(
+                        mirror.x * CELL_SIZE + CELL_SIZE / 2,
+                        mirror.y * CELL_SIZE + CELL_SIZE / 2,
+                        mirror.type,
+                        mirror.rotation
+                    );
+                }
+            }
+            
+            drawSource(cx, cy, x, y) {
+                // Glow effect
+                this.ctx.shadowColor = '#00ff88';
+                this.ctx.shadowBlur = 30;
+                
+                // Outer ring
+                this.ctx.fillStyle = 'rgba(0, 255, 136, 0.3)';
+                this.ctx.beginPath();
+                this.ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Inner circle
+                this.ctx.fillStyle = '#00ff88';
+                this.ctx.beginPath();
+                this.ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.shadowBlur = 0;
+                
+                // Icon
+                this.ctx.fillStyle = '#0a0a0f';
+                this.ctx.font = '16px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText('💡', cx, cy);
+                
+                // Direction indicator
+                this.ctx.strokeStyle = '#00ff88';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                const dir = DIRECTIONS[this.sourceDir];
+                this.ctx.moveTo(cx + dir.x * 20, cy + dir.y * 20);
+                this.ctx.lineTo(cx + dir.x * 30, cy + dir.y * 30);
+                this.ctx.stroke();
+            }
+            
+            drawTarget(cx, cy, isHit) {
+                const color = isHit ? '#00ff88' : '#ff4757';
+                
+                // Glow effect
+                this.ctx.shadowColor = color;
+                this.ctx.shadowBlur = isHit ? 40 : 20;
+                
+                // Outer ring
+                this.ctx.fillStyle = isHit ? 'rgba(0, 255, 136, 0.4)' : 'rgba(255, 71, 87, 0.3)';
+                this.ctx.beginPath();
+                this.ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Inner circle
+                this.ctx.fillStyle = color;
+                this.ctx.beginPath();
+                this.ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.shadowBlur = 0;
+                
+                // Icon
+                this.ctx.fillStyle = '#0a0a0f';
+                this.ctx.font = '16px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(isHit ? '✓' : '🎯', cx, cy);
+            }
+            
+            drawWall(px, py) {
+                this.ctx.fillStyle = '#444';
+                this.ctx.fillRect(px + 2, py + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+                
+                // 3D effect
+                this.ctx.fillStyle = '#333';
+                this.ctx.fillRect(px + 4, py + 4, CELL_SIZE - 4, CELL_SIZE - 4);
+                
+                this.ctx.fillStyle = '#555';
+                this.ctx.fillRect(px + 4, py + 4, CELL_SIZE - 8, CELL_SIZE - 8);
+                
+                // Brick pattern
+                this.ctx.fillStyle = '#444';
+                this.ctx.fillRect(px + 8, py + CELL_SIZE / 2 - 2, CELL_SIZE - 16, 4);
+            }
+            
+            drawMirror(cx, cy, type, rotation) {
+                this.ctx.save();
+                this.ctx.translate(cx, cy);
+                this.ctx.rotate(rotation * Math.PI / 4);
+                
+                if (type === 'mirror') {
+                    // Mirror glow
+                    this.ctx.shadowColor = '#00d4ff';
+                    this.ctx.shadowBlur = 15;
+                    
+                    // Mirror base
+                    this.ctx.fillStyle = 'rgba(0, 212, 255, 0.3)';
+                    this.ctx.fillRect(-20, -20, 40, 40);
+                    
+                    // Mirror line
+                    this.ctx.strokeStyle = '#00d4ff';
+                    this.ctx.lineWidth = 4;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(-18, -18);
+                    this.ctx.lineTo(18, 18);
+                    this.ctx.stroke();
+                    
+                    this.ctx.shadowBlur = 0;
+                    
+                    // Frame
+                    this.ctx.strokeStyle = 'rgba(0, 212, 255, 0.5)';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(-22, -22, 44, 44);
+                } else if (type === 'splitter') {
+                    // Splitter glow
+                    this.ctx.shadowColor = '#7b2ff7';
+                    this.ctx.shadowBlur = 15;
+                    
+                    // Splitter base
+                    this.ctx.fillStyle = 'rgba(123, 47, 247, 0.3)';
+                    this.ctx.fillRect(-20, -20, 40, 40);
+                    
+                    // X shape
+                    this.ctx.strokeStyle = '#7b2ff7';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(-15, -15);
+                    this.ctx.lineTo(15, 15);
+                    this.ctx.moveTo(15, -15);
+                    this.ctx.lineTo(-15, 15);
+                    this.ctx.stroke();
+                    
+                    this.ctx.shadowBlur = 0;
+                    
+                    // Frame
+                    this.ctx.strokeStyle = 'rgba(123, 47, 247, 0.5)';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.strokeRect(-22, -22, 44, 44);
+                }
+                
+                this.ctx.restore();
+            }
+            
+            drawParticles() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    
+                    this.ctx.globalAlpha = p.life;
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.globalAlpha = 1;
+                    
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life -= 0.02;
+                    
+                    if (p.life <= 0) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+            }
+            
+            animate() {
+                this.draw();
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+        
+        // Initialize game
+        const game = new LightPathGame();
+    </script>
+</body>
+</html>
