@@ -715,6 +715,17 @@
                     startDir
                 );
                 
+                // Add source position to the beginning of each path to remove gap
+                for (const path of this.lightPath) {
+                    if (path.length > 0) {
+                        path.unshift({
+                            x: this.sourcePos.x,
+                            y: this.sourcePos.y,
+                            dir: startDir
+                        });
+                    }
+                }
+                
                 this.checkVictory();
             }
             
